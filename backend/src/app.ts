@@ -27,7 +27,7 @@ app.use(
   })
 );
 
-// CORS configuration (supports localhost, custom domain, and Vercel deployments)
+// CORS configuration (supports localhost, custom domain, Vercel, and Railway deployments)
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -35,6 +35,7 @@ app.use(
       if (
         origin === env.FRONTEND_URL ||
         origin.endsWith('.vercel.app') ||
+        origin.endsWith('.up.railway.app') ||
         origin.includes('localhost') ||
         origin.includes('127.0.0.1')
       ) {
