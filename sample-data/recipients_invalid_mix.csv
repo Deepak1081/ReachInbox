@@ -1,0 +1,8 @@
+Recipient Name,email,Notes
+Valid Lead 1,lead1@reachinbox.test,Valid email
+Invalid One,not-an-email-address,Should be rejected
+Valid Lead 1 Duplicate,lead1@reachinbox.test,Duplicate should be deduplicated
+Valid Lead 2,lead2@reachinbox.test,Valid email
+Malformed Domain,broken@domain,Missing TLD
+Valid Lead 3,lead3@reachinbox.test,Valid email
+Another Duplicate,lead2@reachinbox.test,Duplicate should be deduplicated

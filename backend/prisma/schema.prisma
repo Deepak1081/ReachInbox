@@ -1,0 +1,126 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                String             @id @default(uuid())
+  googleId          String             @unique
+  name              String
+  email             String             @unique
+  avatar            String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  senders           Sender[]
+  campaigns         EmailCampaign[]
+  scheduledEmails   ScheduledEmail[]
+  slackIntegration  SlackIntegration?
+
+  @@map("users")
+}
+
+model Sender {
+  id                String             @id @default(uuid())
+  userId            String
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email             String
+  displayName       String
+  smtpHost          String             @default("smtp.ethereal.email")
+  smtpPort          Int                @default(587)
+  smtpUser          String
+  smtpPass          String
+  isDefault         Boolean            @default(false)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  scheduledEmails   ScheduledEmail[]
+  rateLimitRecords  RateLimitRecord[]
+
+  @@unique([userId, email])
+  @@index([userId])
+  @@map("senders")
+}
+
+model EmailCampaign {
+  id                 String             @id @default(uuid())
+  userId             String
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject            String
+  body               String
+  startTime          DateTime           @default(now())
+  delayBetweenEmails Int                @default(2000) // in milliseconds
+  hourlyLimit        Int                @default(200)
+  status             String             @default("scheduled") // scheduled, in_progress, completed, paused, cancelled
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  emails             ScheduledEmail[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("email_campaigns")
+}
+
+model ScheduledEmail {
+  id              String         @id @default(uuid())
+  campaignId      String
+  campaign        EmailCampaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  senderId        String
+  sender          Sender         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  recipientEmail  String
+  subject         String
+  body            String
+  scheduledAt     DateTime
+  sentAt          DateTime?
+  status          String         @default("scheduled") // scheduled, processing, sent, failed
+  bullJobId       String?        @unique
+  idempotencyKey  String         @unique
+  errorMessage    String?
+  etherealUrl     String?
+  messageId       String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([campaignId])
+  @@index([userId])
+  @@index([senderId])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([recipientEmail])
+  @@map("scheduled_emails")
+}
+
+model SlackIntegration {
+  id                  String         @id @default(uuid())
+  userId              String         @unique
+  user                User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken         String         // encrypted at rest (AES-256-GCM)
+  teamId              String
+  teamName            String
+  incomingWebhookUrl  String?
+  defaultChannelId    String?
+  connected           Boolean        @default(true)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  @@map("slack_integrations")
+}
+
+model RateLimitRecord {
+  id          String   @id @default(uuid())
+  senderId    String
+  sender      Sender   @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  hourWindow  String   // format: "YYYY-MM-DD-HH" e.g. "2026-11-20-16"
+  count       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([senderId, hourWindow])
+  @@index([senderId])
+  @@index([hourWindow])
+  @@map("rate_limit_records")
+}
